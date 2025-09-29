@@ -1,7 +1,9 @@
 ﻿using MealieToTodoist.Domain.DTOs.Mealie;
 using MealieToTodoist.Domain.Entities;
 using MealieToTodoist.Domain.Repositories;
+using Microsoft.Extensions.Options;
 using System.Text.Json;
+using Todoist.Net.Models;
 
 namespace MealieToTodoist.Domain
 {
@@ -9,25 +11,31 @@ namespace MealieToTodoist.Domain
     {
         private readonly MealieRepository _mealieRepository;
         private readonly TodoistRepository _todoistRepository;
+        private readonly IOptions<Settings> _settings;
 
-        public SyncService(MealieRepository mealieRepository, TodoistRepository todoistRepository)
+        public SyncService(MealieRepository mealieRepository, TodoistRepository todoistRepository, IOptions<Settings> settings)
         {
             _mealieRepository = mealieRepository;
             _todoistRepository = todoistRepository;
+            _settings = settings;
         }
         public async Task SyncShoppingList(string mealieShoppingListId)
         {
             var shoppingList = await _mealieRepository.GetShoppingListDetailsAsync();
             var todoistItems = await _todoistRepository.GetAllTasks();            
             // Find all the todoist items that are in the mealie shopping list - we should not change these.
-            List<ShoppingListItem> itemsToMarkComplete = new List<ShoppingListItem>();
-            Dictionary<TodoistTaskToCreate, ShoppingListItem> itemsToCreate = new();
+            List<ShoppingListItem> mealieItemsToMarkComplete = new List<ShoppingListItem>();
+            List<ShoppingListItem> mealieItemsToUpdate = new List<ShoppingListItem>();
+            List<ShoppingListItem> mealieItemsToDelete = new List<ShoppingListItem>();
+            List<TodoistTaskItem> todoistItemsToComplete = new List<TodoistTaskItem>();
+            Dictionary<TodoistTaskToCreateOrUpdate, ShoppingListItem> todoistItemsToCreateOrUpdate = new();
+
             foreach (var mealieItem in shoppingList.Where(p=>!p.Checked))
             {
                 if (mealieItem.TodoistId == null)
                 {
-                    TodoistTaskToCreate todoistTaskToCreate = new TodoistTaskToCreate(mealieItem.Display, mealieItem.Label?.Name, "Meal");
-                    itemsToCreate.Add(todoistTaskToCreate, mealieItem);
+                    TodoistTaskToCreateOrUpdate todoistTaskToCreate = new TodoistTaskToCreateOrUpdate(mealieItem.Display, mealieItem.Label?.Name, "Meal");
+                    todoistItemsToCreateOrUpdate.Add(todoistTaskToCreate, mealieItem);
                 }
                 else
                 {
@@ -37,38 +45,70 @@ namespace MealieToTodoist.Domain
                         var todoistItem = todoistItems.First(t => t.Id == mealieItem.TodoistId);
                         if (todoistItem.Name != mealieItem.Display)
                         {
-                            TodoistTaskToCreate todoistTaskToCreate = new TodoistTaskToCreate(mealieItem.Display, mealieItem.Label?.Name, "Meal");
+                            TodoistTaskToCreateOrUpdate todoistTaskToCreate = new TodoistTaskToCreateOrUpdate(mealieItem.Display, mealieItem.Label?.Name, "Meal");
                             todoistTaskToCreate.TodoistId = todoistItem.Id;
                             // We need to update the item in todoist
-                            itemsToCreate.Add(todoistTaskToCreate, mealieItem);
+                            todoistItemsToCreateOrUpdate.Add(todoistTaskToCreate, mealieItem);
                             continue;
                         }
                     }
                     else
                     {
                         // Item does not exist in todoist, we should remove it from mealie
-                        itemsToMarkComplete.Add(mealieItem);
+                        mealieItemsToMarkComplete.Add(mealieItem);
                     }
                 }
             }
-            List<ShoppingListItem> itemsToUpdate = new List<ShoppingListItem>();
-            await _todoistRepository.AddItemsAndSetTodoistId(itemsToCreate.Keys);
-            foreach(var item in itemsToCreate)
+            
+            foreach(var mealieItem in shoppingList.Where(p=>p.Checked && p.TodoistId != null))
+            {
+                // If the item is marked complete in mealie, but has a todoist id, we should mark it complete in todoist or remove it.
+                // We need to mark it as complete in todoist if it's still there
+                var todoistItem = todoistItems.FirstOrDefault(t => t.Id == mealieItem.TodoistId);
+                if (todoistItem!=null)
+                {
+                    todoistItemsToComplete.Add(todoistItem);
+                }
+
+                if (_settings.Value.RemoveCompletedMealieItems)
+                {
+                    mealieItemsToDelete.Add(mealieItem);
+                }
+                else
+                {
+                    mealieItem.TodoistId = null;
+                    mealieItemsToUpdate.Add(mealieItem);
+                }
+            }
+
+
+            await _todoistRepository.AddItemsAndSetTodoistId(todoistItemsToCreateOrUpdate.Keys, todoistItemsToComplete.Select(p => p.Id));
+            foreach(var item in todoistItemsToCreateOrUpdate)
             {
                 // Add to Extras in the ShoppingListItem
                 var shoppingListItem = item.Value;
                 var todoistTask = item.Key;
                 shoppingListItem.TodoistId = todoistTask.TodoistId;
-                itemsToUpdate.Add(shoppingListItem);
+                mealieItemsToUpdate.Add(shoppingListItem);
             }
-
-            foreach(var item in itemsToMarkComplete)
+            
+            foreach (var item in mealieItemsToMarkComplete)
             {
-                item.Checked = true;
-                itemsToUpdate.Add(item);
+                if (_settings.Value.RemoveCompletedMealieItems)
+                {
+                    mealieItemsToDelete.Add(item);
+                }
+                else
+                {
+                    item.Checked = true;
+                    item.TodoistId = null;
+                    mealieItemsToUpdate.Add(item);
+                }
             }
 
-            await _mealieRepository.UpdateShoppingListDetailsAsync(itemsToUpdate);
+            await _mealieRepository.UpdateShoppingListDetailsAsync(mealieItemsToUpdate);
+            await _mealieRepository.DeleteShoppingListDetailsAsync(mealieItemsToDelete);
+
         }
     }
 }

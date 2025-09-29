@@ -1,6 +1,7 @@
 ﻿using MealieToTodoist.Domain.DTOs.Mealie;
 using MealieToTodoist.Domain.Entities;
 using System.Net.Http.Json;
+using System.Runtime.InteropServices;
 
 namespace MealieToTodoist.Domain.Repositories
 {
@@ -41,6 +42,23 @@ namespace MealieToTodoist.Domain.Repositories
             var client = CreateMealieClient();
             // Example endpoint, adjust as needed
             var response = await client.PutAsJsonAsync($"api/households/shopping/items", values);
+            response.EnsureSuccessStatusCode();
+        }
+
+        internal async Task DeleteShoppingListDetailsAsync(List<ShoppingListItem> itemsToDelete)
+        {
+            var client = CreateMealieClient();
+
+            // Build query string with ids
+            var ids = itemsToDelete
+                .Where(i => !string.IsNullOrWhiteSpace(i.Id))
+                .Select(i => $"ids={Uri.EscapeDataString(i.Id)}");
+
+            var queryString = string.Join("&", ids);
+
+            var requestUri = $"api/households/shopping/items?{queryString}";
+
+            var response = await client.DeleteAsync(requestUri);
             response.EnsureSuccessStatusCode();
         }
     }

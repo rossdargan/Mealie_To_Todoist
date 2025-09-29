@@ -55,7 +55,15 @@ namespace MealieToTodoist.Domain.DTOs.Mealie
             {
                 using var doc = JsonDocument.Parse(Extras.GetRawText());
                 var extrasDict = doc.RootElement.EnumerateObject().ToDictionary(p => p.Name, p => p.Value.Clone());
-                extrasDict["todoist_id"] = JsonDocument.Parse($"\"{value}\"").RootElement.Clone();
+
+                if (value == null)
+                {
+                    extrasDict.Remove("todoist_id");
+                }
+                else
+                {
+                    extrasDict["todoist_id"] = JsonDocument.Parse($"\"{value}\"").RootElement.Clone();
+                }
 
                 var newExtrasJson = JsonSerializer.Serialize(extrasDict);
                 Extras = JsonDocument.Parse(newExtrasJson).RootElement;

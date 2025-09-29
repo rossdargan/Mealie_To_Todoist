@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace MealieToTodoist.Domain.Entities
 {
-    public record TodoistTaskToCreate(string Content, string? Label, string Description)
+    public record TodoistTaskToCreateOrUpdate(string Content, string? Label, string Description)
     {
         public string TodoistId { get; set; }
     }

@@ -48,23 +48,25 @@ namespace MealieToTodoist.Domain.Repositories
             }
             return results;
         }
-        public async Task AddItemsAndSetTodoistId(IEnumerable<TodoistTaskToCreate> taskToCreate)
+        public async Task AddItemsAndSetTodoistId(IEnumerable<TodoistTaskToCreateOrUpdate> taskToCreate, IEnumerable<string> tasksToComplete)
         {
-            if(!taskToCreate.Any())
+            if(!(taskToCreate.Any()|| tasksToComplete.Any()))
             {
                 return;
             }
             var shoppingProject = await _lazyShoppingProject.Value;
             var transaction = _lazyClient.Value.CreateTransaction();
-            Dictionary<TodoistTaskToCreate, AddItem> taskToItemMap = new Dictionary<TodoistTaskToCreate, AddItem>();
+            Dictionary<TodoistTaskToCreateOrUpdate, AddItem> taskToItemMap = new Dictionary<TodoistTaskToCreateOrUpdate, AddItem>();
             foreach (var task in taskToCreate)
             {
+                var labels = string.IsNullOrEmpty(task.Label) ? new Collection<string>() : new Collection<string> { task.Label };
+
                 if (task.TodoistId != null)
                 {
                     var item = new UpdateItem(task.TodoistId)
                     {
                         Content = task.Content,
-                        Labels = new Collection<string> { task.Label },
+                        Labels = labels,
                         Description = task.Description
                     };                    
                     await transaction.Items.UpdateAsync(item);
@@ -73,18 +75,23 @@ namespace MealieToTodoist.Domain.Repositories
                 {
                     var item = new AddItem(task.Content, shoppingProject.Id)
                     {
-                        Labels = new Collection<string> { task.Label },
+                        Labels = labels,
                         Description = task.Description
                     };
                     taskToItemMap[task] = item;
                     await transaction.Items.AddAsync(item);
                 }
+                
+            }
+            foreach(var itemToComplete in tasksToComplete)
+            {
+                await transaction.Items.CloseAsync(itemToComplete);
             }
             await transaction.CommitAsync();
 
             foreach (var task in taskToCreate)
             {
-                // This might be an update
+
                 if(task.TodoistId != null)
                 {
                     continue;
