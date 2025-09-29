@@ -36,6 +36,6 @@ using var serviceScope = host.Services.CreateScope();
 var services = serviceScope.ServiceProvider;
 var repo = services.GetService<SyncService>();
 
-await repo.SyncShoppingList("ec65c231-9d2a-4801-a657-5ce843b53270");
+await repo.SyncShoppingList();
 
 

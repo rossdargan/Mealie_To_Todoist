@@ -6,6 +6,6 @@
         public string MealieBaseUrl { get; set; }
         public string TodoistApiKey { get; set; }
         public string TodoistShoppingListName { get; set; }
-        public bool RemoveCompletedMealieItems { get; set; } = true;
+        public bool RemoveCompletedMealieItems { get; set; } = false;
     }
 }

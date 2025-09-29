@@ -19,7 +19,7 @@ namespace MealieToTodoist.Domain
             _todoistRepository = todoistRepository;
             _settings = settings;
         }
-        public async Task SyncShoppingList(string mealieShoppingListId)
+        public async Task SyncShoppingList()
         {
             var shoppingList = await _mealieRepository.GetShoppingListDetailsAsync();
             var todoistItems = await _todoistRepository.GetAllTasks();            
