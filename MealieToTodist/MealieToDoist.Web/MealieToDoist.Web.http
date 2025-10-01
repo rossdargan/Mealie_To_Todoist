@@ -1,0 +1,6 @@
+@MealieToDoist.Web_HostAddress = http://localhost:32768
+
+GET {{MealieToDoist.Web_HostAddress}}/notification/
+Accept: application/json
+
+###

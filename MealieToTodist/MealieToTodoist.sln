@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MealieToTodoist.Console", "
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MealieToTodoist.Domain", "MealieToTodist.Domain\MealieToTodoist.Domain.csproj", "{9CDCD629-EC78-4ACF-8BC5-E00855AB3F46}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MealieToDoist.Web", "MealieToDoist.Web\MealieToDoist.Web.csproj", "{02FA3F84-A395-4D51-A5AE-19A290F27304}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{9CDCD629-EC78-4ACF-8BC5-E00855AB3F46}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9CDCD629-EC78-4ACF-8BC5-E00855AB3F46}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9CDCD629-EC78-4ACF-8BC5-E00855AB3F46}.Release|Any CPU.Build.0 = Release|Any CPU
+		{02FA3F84-A395-4D51-A5AE-19A290F27304}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{02FA3F84-A395-4D51-A5AE-19A290F27304}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{02FA3F84-A395-4D51-A5AE-19A290F27304}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{02FA3F84-A395-4D51-A5AE-19A290F27304}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
