@@ -28,12 +28,17 @@ public class ShoppingListSyncBackgroundService : BackgroundService
             Task timerTask;
             try
             {
+                // Recreate the timer if it has been disposed or is in an invalid state
+                if (_timer == null)
+                {
+                    _timer = new PeriodicTimer(TimeSpan.FromHours(2));
+                }
                 timerTask = _timer.WaitForNextTickAsync(stoppingToken).AsTask();
             }
             catch (InvalidOperationException)
             {
                 // Timer has been disposed or is in an invalid state, restart the timer and continue
-                _timer.Dispose();
+                _timer?.Dispose();
                 _timer = new PeriodicTimer(TimeSpan.FromHours(2));
                 continue;
             }
@@ -49,7 +54,16 @@ public class ShoppingListSyncBackgroundService : BackgroundService
                 while (true)
                 {
                     var delayTask = Task.Delay(debounceMilliseconds, debounceCts.Token);
-                    var nextTimerTask = _timer.WaitForNextTickAsync(debounceCts.Token).AsTask();
+                    Task nextTimerTask = null;
+                    try
+                    {
+                        nextTimerTask = _timer.WaitForNextTickAsync(debounceCts.Token).AsTask();
+                    }
+                    catch (InvalidOperationException)
+                    {
+                        // Timer is in an invalid state, break out of debounce and recreate timer in outer catch
+                        break;
+                    }
                     var nextTriggerTask = _syncTriggerChannel.Reader.WaitToReadAsync(debounceCts.Token).AsTask();
 
                     var finished = await Task.WhenAny(delayTask, nextTimerTask, nextTriggerTask);
@@ -73,6 +87,12 @@ public class ShoppingListSyncBackgroundService : BackgroundService
                 }
 
                 await _syncService.SyncShoppingList();
+            }
+            catch (InvalidOperationException ex)
+            {
+                _logger.LogError(ex, "PeriodicTimer was in an invalid state during debounce. Recreating timer.");
+                _timer?.Dispose();
+                _timer = new PeriodicTimer(TimeSpan.FromHours(2));
             }
             catch (Exception ex)
             {
