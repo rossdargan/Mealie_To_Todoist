@@ -29,7 +29,7 @@ var app = builder.Build();
 
 
 var notificationHandler = app.MapGroup("/notification");
-notificationHandler.MapGet("/", (IHostApplicationLifetime appLifetime, IServiceProvider services) =>
+notificationHandler.MapPost("/", (IHostApplicationLifetime appLifetime, IServiceProvider services) =>
 {
     var syncTriggerChannel = services.GetRequiredService<SyncTriggerChannel>();
     syncTriggerChannel.Trigger();    
