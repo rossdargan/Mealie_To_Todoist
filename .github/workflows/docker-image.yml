@@ -18,7 +18,7 @@ jobs:
       uses: docker/setup-buildx-action@v3
     - name: Build the Docker image
       run: docker build . --file MealieToDoist.Web/Dockerfile --tag my-image-name:$(date +%s)
-      working-directory: ${{ github.workspace }}/MealieToDoist
+      working-directory: ${{ github.workspace }}/MealieToTodist
     - name: Extract metadata
       id: meta
       uses: docker/metadata-action@v5
@@ -34,10 +34,8 @@ jobs:
     - name: Build and push Docker image
       uses: docker/build-push-action@v5
       with:
-        context: ./MealieToDoist
-        file: ./MealieToDoist/MealieToDoist.Web/Dockerfile
+        context: ./MealieToTodist
+        file: ./MealieToTodist/MealieToDoist.Web/Dockerfile
         push: ${{ github.event_name == 'release' }}
         tags: ${{ steps.meta.outputs.tags }}
-        labels: ${{ steps.meta.outputs.labels }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
+        labels: ${{ s
