@@ -52,7 +52,7 @@ networks: {}
 
 ## Triggering Syncs from Mealie
 
-To keep Todoist updated on demand, you can add a [Notifier](https://hay-kot.github.io/mealie/features/notifications/) to Mealie:
+To keep Todoist updated on demand, you can add a [Notifier](https://docs.mealie.io/documentation/getting-started/features/#notifiers) to Mealie:
 
 1. Go to your Mealie admin panel.
 2. Navigate to **Settings > Notifiers**.
