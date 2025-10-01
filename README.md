@@ -19,9 +19,21 @@ This keeps your shopping list in sync across both platforms.
 
 You can run the app using Docker Compose. Below is a sample configuration:
 
-````````
+```
 
-**Do not include your secrets in version control!**
+services:
+  mealietotodoist:
+    image: ghcr.io/rossdargan/mealie_to_todoist:0.3.2-alpha
+    restart: unless-stopped
+    ports:
+      - 8888:8080
+    environment:
+      - Settings__MealieBaseUrl=https://mealie.example.com
+      - Settings__MealieApiKey={mealiekey}
+      - Settings__TodoistApiKey={todoistkey}
+      - Settings__TodoistShoppingListName=Shopping
+networks: {}
+```
 
 ### Required Environment Variables
 
