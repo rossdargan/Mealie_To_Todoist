@@ -1,6 +1,6 @@
 # Mealie_To_Todoist
 
-**Mealie_To_Todoist** is a .NET 9 application that synchronizes your [Mealie](https://hay-kot.github.io/mealie/) shopping list with [Todoist](https://todoist.com/). It ensures your shopping items are always up-to-date in Todoist, reflecting changes made in Mealie and vice versa.
+**Mealie_To_Todoist** is a .NET 9 application that synchronizes your [Mealie](https://mealie.io/) shopping list with [Todoist](https://todoist.com/). It ensures your shopping items are always up-to-date in Todoist, reflecting changes made in Mealie and vice versa.
 
 ## How It Works
 
