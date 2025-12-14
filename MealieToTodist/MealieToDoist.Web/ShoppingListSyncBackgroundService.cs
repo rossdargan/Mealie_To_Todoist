@@ -1,10 +1,4 @@
 using MealieToTodoist.Domain;
-using MealieToTodoist.Domain.Repositories;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using System.Threading;
-using System.Threading.Channels;
-using System.Threading.Tasks;
 public class ShoppingListSyncBackgroundService : BackgroundService
 {
     private PeriodicTimer _timer = new(TimeSpan.FromHours(2));

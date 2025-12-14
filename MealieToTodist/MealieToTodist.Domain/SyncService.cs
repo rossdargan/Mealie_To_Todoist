@@ -123,7 +123,7 @@ namespace MealieToTodoist.Domain
             _logger.LogInformation("Deleting {Count} items from Mealie.", mealieItemsToDelete.Count);
             await _mealieRepository.DeleteShoppingListDetailsAsync(mealieItemsToDelete);
 
-            _logger.LogInformation("Shopping list sync complete.");
+            _logger.LogInformation("Shopping list sync complete. " + DateTime.Now.ToString("G"));
         }
     }
 }
