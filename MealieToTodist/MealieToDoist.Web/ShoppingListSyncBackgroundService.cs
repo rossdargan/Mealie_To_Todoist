@@ -22,7 +22,6 @@ public class ShoppingListSyncBackgroundService : BackgroundService
             Task timerTask;
             try
             {
-                // Recreate the timer if it has been disposed or is in an invalid state
                 if (_timer == null)
                 {
                     _timer = new PeriodicTimer(TimeSpan.FromHours(2));
@@ -31,12 +30,12 @@ public class ShoppingListSyncBackgroundService : BackgroundService
             }
             catch (InvalidOperationException)
             {
-                // Timer has been disposed or is in an invalid state, restart the timer and continue
                 _timer?.Dispose();
                 _timer = new PeriodicTimer(TimeSpan.FromHours(2));
                 continue;
             }
 
+            // Always create a fresh channel read for this iteration
             var syncTask = _syncTriggerChannel.Reader.ReadAsync(stoppingToken).AsTask();
 
             var completedTask = await Task.WhenAny(timerTask, syncTask);
@@ -55,9 +54,9 @@ public class ShoppingListSyncBackgroundService : BackgroundService
                     }
                     catch (InvalidOperationException)
                     {
-                        // Timer is in an invalid state, break out of debounce and recreate timer in outer catch
                         break;
                     }
+                    
                     var nextTriggerTask = _syncTriggerChannel.Reader.WaitToReadAsync(debounceCts.Token).AsTask();
 
                     var finished = await Task.WhenAny(delayTask, nextTimerTask, nextTriggerTask);
