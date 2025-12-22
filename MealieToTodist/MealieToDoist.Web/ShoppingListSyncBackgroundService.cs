@@ -13,7 +13,7 @@ public class ShoppingListSyncBackgroundService : BackgroundService
         _logger = logger;
     }
 
-   
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         const int debounceMilliseconds = 5000;
@@ -35,15 +35,43 @@ public class ShoppingListSyncBackgroundService : BackgroundService
                 continue;
             }
 
-            // Always create a fresh channel read for this iteration
-            var syncTask = _syncTriggerChannel.Reader.ReadAsync(stoppingToken).AsTask();
+            // CRITICAL FIX: Use WaitToReadAsync instead of ReadAsync
+            // This checks if data is available without consuming it
+            var syncTask = _syncTriggerChannel.Reader.WaitToReadAsync(stoppingToken).AsTask();
 
             var completedTask = await Task.WhenAny(timerTask, syncTask);
+
+            // Now determine what triggered and consume if necessary
+            if (completedTask == syncTask)
+            {
+                try
+                {
+                    // WaitToReadAsync returns true if data is available
+                    if (await syncTask)
+                    {
+                        // NOW consume the value since we know it's there
+                        if (_syncTriggerChannel.Reader.TryRead(out _))
+                        {
+                            _logger.LogInformation("Manual trigger received via notification");
+                        }
+                    }
+                }
+                catch (OperationCanceledException)
+                {
+                    continue;
+                }
+            }
+            else
+            {
+                _logger.LogInformation("Timer trigger fired");
+            }
 
             // Debounce logic: wait for 5 seconds of inactivity before syncing
             var debounceCts = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
             try
             {
+                _logger.LogInformation("Starting debounce window");
+
                 while (true)
                 {
                     var delayTask = Task.Delay(debounceMilliseconds, debounceCts.Token);
@@ -56,30 +84,34 @@ public class ShoppingListSyncBackgroundService : BackgroundService
                     {
                         break;
                     }
-                    
-                    var nextTriggerTask = _syncTriggerChannel.Reader.WaitToReadAsync(debounceCts.Token).AsTask();
 
+                    var nextTriggerTask = _syncTriggerChannel.Reader.WaitToReadAsync(debounceCts.Token).AsTask();
                     var finished = await Task.WhenAny(delayTask, nextTimerTask, nextTriggerTask);
+
                     if (finished == delayTask)
                     {
-                        // No new trigger or timer within debounce window, proceed to sync
+                        _logger.LogInformation("Debounce complete, syncing now");
                         break;
                     }
                     else if (finished == nextTimerTask)
                     {
-                        // Timer ticked again, continue debounce
+                        _logger.LogInformation("Timer ticked during debounce");
                         continue;
                     }
                     else if (finished == nextTriggerTask)
                     {
                         // Drain the trigger (consume the value)
-                        if (_syncTriggerChannel.Reader.TryRead(out _)) { }
-                        // Continue waiting for another debounce window
+                        if (_syncTriggerChannel.Reader.TryRead(out _))
+                        {
+                            _logger.LogInformation("Additional trigger during debounce, resetting timer");
+                        }
                         continue;
                     }
                 }
 
+                _logger.LogInformation("Executing SyncShoppingList");
                 await _syncService.SyncShoppingList();
+                _logger.LogInformation("SyncShoppingList completed");
             }
             catch (InvalidOperationException ex)
             {
