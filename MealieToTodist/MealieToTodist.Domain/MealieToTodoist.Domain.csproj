@@ -8,7 +8,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.9" />
-    <PackageReference Include="Todoist.Net" Version="10.0.0" />
+    <PackageReference Include="Todoist.Net" Version="11.0.0-beta.1" />
   </ItemGroup>
 
 </Project>
