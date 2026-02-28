@@ -4,7 +4,6 @@ using MealieToTodoist.Domain.Repositories;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Text.Json;
-using Todoist.Net.Models;
 
 namespace MealieToTodoist.Domain
 {
@@ -14,6 +13,7 @@ namespace MealieToTodoist.Domain
         private readonly TodoistRepository _todoistRepository;
         private readonly IOptions<Settings> _settings;
         private readonly ILogger<SyncService> _logger;
+        private Dictionary<string, string> _recipeNameCache;
 
         public SyncService(MealieRepository mealieRepository, TodoistRepository todoistRepository, IOptions<Settings> settings, ILogger<SyncService> logger)
         {
@@ -22,9 +22,11 @@ namespace MealieToTodoist.Domain
             _settings = settings;
             _logger = logger;
         }
+
         public async Task SyncShoppingList()
         {
             _logger.LogInformation("Starting shopping list sync.");
+            _recipeNameCache = new Dictionary<string, string>();
 
             var shoppingList = await _mealieRepository.GetShoppingListDetailsAsync();
             _logger.LogInformation("Fetched {Count} items from Mealie shopping list.", shoppingList.Length);
@@ -40,10 +42,12 @@ namespace MealieToTodoist.Domain
 
             foreach (var mealieItem in shoppingList.Where(p => !p.Checked))
             {
+                var recipeName = await GetRecipeNameAsync(mealieItem.RecipeId);
+
                 if (mealieItem.TodoistId == null)
                 {
                     _logger.LogDebug("Mealie item '{Display}' has no TodoistId. Will create in Todoist.", mealieItem.Display);
-                    TodoistTaskToCreateOrUpdate todoistTaskToCreate = new TodoistTaskToCreateOrUpdate(mealieItem.Display, mealieItem.Label?.Name, "Meal");
+                    TodoistTaskToCreateOrUpdate todoistTaskToCreate = new TodoistTaskToCreateOrUpdate(mealieItem.Display, mealieItem.Label?.Name, recipeName ?? "Meal");
                     todoistItemsToCreateOrUpdate.Add(todoistTaskToCreate, mealieItem);
                 }
                 else
@@ -54,7 +58,7 @@ namespace MealieToTodoist.Domain
                         if (todoistItem.Name != mealieItem.Display)
                         {
                             _logger.LogDebug("Mealie item '{Display}' differs from Todoist task '{Name}'. Will update Todoist.", mealieItem.Display, todoistItem.Name);
-                            TodoistTaskToCreateOrUpdate todoistTaskToCreate = new TodoistTaskToCreateOrUpdate(mealieItem.Display, mealieItem.Label?.Name, "Meal");
+                            TodoistTaskToCreateOrUpdate todoistTaskToCreate = new TodoistTaskToCreateOrUpdate(mealieItem.Display, mealieItem.Label?.Name, recipeName ?? "Meal");
                             todoistTaskToCreate.TodoistId = todoistItem.Id;
                             todoistItemsToCreateOrUpdate.Add(todoistTaskToCreate, mealieItem);
                             continue;
@@ -124,6 +128,40 @@ namespace MealieToTodoist.Domain
             await _mealieRepository.DeleteShoppingListDetailsAsync(mealieItemsToDelete);
 
             _logger.LogInformation("Shopping list sync complete. " + DateTime.Now.ToString("G"));
+        }
+
+        private async Task<string> GetRecipeNameAsync(string recipeId)
+        {
+            if (string.IsNullOrWhiteSpace(recipeId))
+            {
+                return null;
+            }
+
+            // Check cache first
+            if (_recipeNameCache.TryGetValue(recipeId, out var cachedName))
+            {
+                _logger.LogDebug("Using cached recipe name for recipe ID: {RecipeId}", recipeId);
+                return cachedName;
+            }
+
+            try
+            {
+                _logger.LogDebug("Fetching recipe name for recipe ID: {RecipeId}", recipeId);
+                var recipeName = await _mealieRepository.GetRecipeNameAsync(recipeId);
+                
+                if (recipeName != null)
+                {
+                    _recipeNameCache[recipeId] = recipeName;
+                    _logger.LogDebug("Cached recipe name '{RecipeName}' for recipe ID: {RecipeId}", recipeName, recipeId);
+                }
+                
+                return recipeName;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to fetch recipe name for recipe ID: {RecipeId}. Using default 'Meal'.", recipeId);
+                return null;
+            }
         }
     }
 }

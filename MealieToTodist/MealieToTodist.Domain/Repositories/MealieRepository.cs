@@ -25,7 +25,7 @@ namespace MealieToTodoist.Domain.Repositories
         public async Task<ShoppingListItem[]> GetShoppingListDetailsAsync()
         {
             var client = CreateMealieClient();
-            // Example endpoint, adjust as needed
+            
             var response = await client.GetAsync($"api/households/shopping/items?perPage=10000");
             response.EnsureSuccessStatusCode();
             var content = await response.Content.ReadFromJsonAsync<MealiePagedResponse<ShoppingListItem>>();
@@ -36,6 +36,27 @@ namespace MealieToTodoist.Domain.Repositories
 
         
             return content.Items;
+        }
+
+        public async Task<string> GetRecipeNameAsync(string recipeId)
+        {
+            if (string.IsNullOrWhiteSpace(recipeId))
+            {
+                return null;
+            }
+
+            try
+            {
+                var client = CreateMealieClient();
+                var response = await client.GetAsync($"api/recipes/{recipeId}");
+                response.EnsureSuccessStatusCode();
+                var recipe = await response.Content.ReadFromJsonAsync<Recipe>();
+                return recipe?.Name;
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException($"Failed to retrieve recipe {recipeId} from Mealie API.", ex);
+            }
         }
 
         internal async Task UpdateShoppingListDetailsAsync(IEnumerable<ShoppingListItem> values)
