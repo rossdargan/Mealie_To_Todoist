@@ -1,5 +1,6 @@
 ﻿using MealieToTodoist.Domain.DTOs.Mealie;
 using MealieToTodoist.Domain.Entities;
+using MealieToTodoist.Domain.TodoistClient;
 using System.Net.Http.Json;
 using System.Runtime.InteropServices;
 

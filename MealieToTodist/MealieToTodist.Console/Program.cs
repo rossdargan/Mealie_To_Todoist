@@ -4,8 +4,8 @@ using System.Net.Http;
 using Microsoft.Extensions.Http;
 using Microsoft.Extensions.Configuration;
 using MealieToTodoist.Domain;
-using Todoist.Net.Extensions;
 using MealieToTodoist.Domain.Repositories;
+using MealieToTodoist.Domain.TodoistClient;
 using Microsoft.Extensions.Options;
 
 
@@ -20,7 +20,6 @@ var host = Host.CreateDefaultBuilder(args)
         services.AddTransient<MealieRepository>();
         services.AddTransient<SyncService>();
         services.AddTransient<TodoistRepository>();
-        services.AddTodoistClient();
         services.AddHttpClient("MealieClient", (provider, client) =>
         {
             var options = provider.GetRequiredService<IOptions<Settings>>().Value;
@@ -28,7 +27,12 @@ var host = Host.CreateDefaultBuilder(args)
             client.DefaultRequestHeaders.Authorization =
                 new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", options.MealieApiKey);
         });
-        // Register other services here as needed
+        services.AddHttpClient<IToDoClient, ToDoClient>("TodoistClient", (provider, client) =>
+        {
+            var options = provider.GetRequiredService<IOptions<Settings>>().Value;
+            client.DefaultRequestHeaders.Authorization =
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", options.TodoistApiKey);
+        });
     })
     .Build();
 

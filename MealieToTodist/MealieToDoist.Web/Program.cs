@@ -1,9 +1,9 @@
 using MealieToTodoist.Domain;
 using MealieToTodoist.Domain.Repositories;
+using MealieToTodoist.Domain.TodoistClient;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using System.Text.Json.Serialization;
-using Todoist.Net.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,7 +14,6 @@ builder.Services.AddTransient<MealieRepository>();
 builder.Services.AddTransient<SyncService>();
 builder.Services.AddTransient<TodoistRepository>();
 builder.Services.AddSingleton<SyncTriggerChannel>();
-builder.Services.AddTodoistClient();
 builder.Services.AddHttpClient("MealieClient", (provider, client) =>
 {
     var options = provider.GetRequiredService<IOptions<Settings>>().Value;
@@ -22,11 +21,15 @@ builder.Services.AddHttpClient("MealieClient", (provider, client) =>
     client.DefaultRequestHeaders.Authorization =
         new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", options.MealieApiKey);
 });
+builder.Services.AddHttpClient<IToDoClient, ToDoClient>("TodoistClient", (provider, client) =>
+{
+    var options = provider.GetRequiredService<IOptions<Settings>>().Value;
+    client.DefaultRequestHeaders.Authorization =
+        new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", options.TodoistApiKey);
+});
 builder.Services.AddHostedService<ShoppingListSyncBackgroundService>();
 
 var app = builder.Build();
-
-
 
 var notificationHandler = app.MapGroup("/notification");
 notificationHandler.MapPost("/", (IHostApplicationLifetime appLifetime, IServiceProvider services) =>
@@ -35,7 +38,6 @@ notificationHandler.MapPost("/", (IHostApplicationLifetime appLifetime, IService
     syncTriggerChannel.Trigger();    
     return Results.Accepted();
 });
-
 
 app.Run();
 
