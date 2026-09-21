@@ -26,16 +26,27 @@ namespace MealieToTodoist.Domain.TodoistClient
             _logger.LogInformation("Retrieving all projects from Todoist API");
             try
             {
-                var request = new HttpRequestMessage(HttpMethod.Get, $"{BaseUrl}/projects");
+                var projects = new List<Project>();
+                string cursor = null;
 
-                var response = await _httpClient.SendAsync(request);
-                response.EnsureSuccessStatusCode();
+                do
+                {
+                    var url = cursor == null ? $"{BaseUrl}/projects" : $"{BaseUrl}/projects?cursor={Uri.EscapeDataString(cursor)}";
+                    var request = new HttpRequestMessage(HttpMethod.Get, url);
 
-                var contentString = await response.Content.ReadAsStringAsync();
-                var content = System.Text.Json.JsonSerializer.Deserialize<ProjectsResponse>(contentString);
+                    var response = await _httpClient.SendAsync(request);
+                    response.EnsureSuccessStatusCode();
 
-                _logger.LogInformation("Successfully retrieved {ProjectCount} projects from Todoist API", content.Results.Count);
-                return content.Results.Select(p => new Project(p.Id, p.Name)).ToList();
+                    var contentString = await response.Content.ReadAsStringAsync();
+                    var content = System.Text.Json.JsonSerializer.Deserialize<ProjectsResponse>(contentString);
+
+                    projects.AddRange(content.Results.Select(p => new Project(p.Id, p.Name)));
+                    cursor = content.NextCursor;
+                }
+                while (!string.IsNullOrEmpty(cursor));
+
+                _logger.LogInformation("Successfully retrieved {ProjectCount} projects from Todoist API", projects.Count);
+                return projects;
             }
             catch (Exception ex)
             {
