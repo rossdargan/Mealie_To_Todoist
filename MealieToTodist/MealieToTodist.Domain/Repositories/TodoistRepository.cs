@@ -23,6 +23,12 @@ namespace MealieToTodoist.Domain.Repositories
         private async Task<Project> GetShoppingProject()
         {
             var shoppingProject = await _toDoClient.GetProjectByNameAsync(_settings.Value.TodoistShoppingListName);
+            if (shoppingProject == null)
+            {
+                throw new InvalidOperationException(
+                    $"Could not find a Todoist project named '{_settings.Value.TodoistShoppingListName}'. " +
+                    "Verify the TodoistShoppingListName setting matches an existing Todoist project exactly.");
+            }
             return shoppingProject;
         }
 
